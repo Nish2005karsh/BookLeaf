@@ -690,7 +690,7 @@ export default function AdminTicketWorkbenchPage({
               <div>
                 <span className="text-[#8A94A3] block">Triage Rationale:</span>
                 <p className="text-[#556070] italic mt-0.5">
-                  "{ticket.aiReason || "Awaiting triage processing"}"
+                  &quot;{ticket.aiReason || "Awaiting triage processing"}&quot;
                 </p>
               </div>
             </div>

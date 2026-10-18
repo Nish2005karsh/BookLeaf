@@ -24,26 +24,45 @@ export function fallbackClassify(
 ): FallbackClassificationResult {
   const text = `${subject} ${description}`.toLowerCase();
 
+  const isLegalThreat =
+    text.includes("legal") ||
+    text.includes("lawsuit") ||
+    text.includes("police") ||
+    text.includes("fraud") ||
+    text.includes("court") ||
+    text.includes("consumer forum");
+
   // 1. ISBN & Metadata
   if (
     text.includes("isbn") ||
     text.includes("imprint") ||
-    text.includes("barcode")
+    text.includes("barcode") ||
+    text.includes("bio") ||
+    text.includes("description") ||
+    text.includes("blurb")
   ) {
     const isCritical =
+      isLegalThreat ||
       text.includes("wrong") ||
       text.includes("mismatch") ||
       text.includes("duplicate") ||
       text.includes("different") ||
       text.includes("error");
 
+    const isLow =
+      text.includes("update") ||
+      text.includes("edit") ||
+      text.includes("change") ||
+      text.includes("bio") ||
+      text.includes("description");
+
     return {
       category: Category.ISBN_METADATA,
-      priority: isCritical ? Priority.CRITICAL : Priority.HIGH,
+      priority: isCritical ? Priority.CRITICAL : isLow ? Priority.LOW : Priority.HIGH,
       confidence: 0.85,
       reason: isCritical
         ? "Rule-based: Detected critical ISBN mismatch or error keyword"
-        : "Rule-based: Detected ISBN or metadata query",
+        : "Rule-based: Detected ISBN or metadata update request",
     };
   }
 
@@ -58,6 +77,7 @@ export function fallbackClassify(
     text.includes("earnings")
   ) {
     const isLongDelayed =
+      isLegalThreat ||
       text.includes("months") ||
       text.includes("never received") ||
       text.includes("haven't received") ||
