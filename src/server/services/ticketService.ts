@@ -3,11 +3,13 @@ import { bookRepository } from "../repositories/bookRepository";
 import { AuthenticatedUser } from "@/lib/auth/guards";
 import { NotFoundError, ConflictError, ValidationError } from "@/lib/http/errors";
 import { calculateUrgencyScore } from "@/lib/tickets/urgency";
+import { processTicketClassification } from "@/lib/ai/classify";
 import {
   TicketStatus,
   Category,
   Priority,
   MessageSender,
+  AiState,
 } from "@prisma/client";
 
 export const ticketService = {
@@ -99,6 +101,11 @@ export const ticketService = {
       subject: data.subject,
       description: data.description,
       attachmentNames: data.attachmentNames,
+    });
+
+    // Asynchronously trigger AI classification (fire-and-forget)
+    processTicketClassification(ticket.id).catch((err) => {
+      console.error("[TicketService] Asynchronous classification failed:", err);
     });
 
     return ticket;

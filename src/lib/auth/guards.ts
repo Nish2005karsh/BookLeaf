@@ -60,3 +60,11 @@ export async function requireAuth(
 
   return session;
 }
+
+export async function requireAdmin(req?: NextRequest): Promise<AuthenticatedUser> {
+  return requireAuth(req, Role.ADMIN);
+}
+
+export async function requireAuthor(req?: NextRequest): Promise<AuthenticatedUser> {
+  return requireAuth(req, Role.AUTHOR);
+}
