@@ -4,7 +4,7 @@ import { CLASSIFY_SYSTEM_PROMPT, buildClassifyPrompt, ClassifyInputSignals } fro
 import { DRAFT_SYSTEM_PROMPT, buildDraftUserPrompt, DraftPromptInput } from "./prompts/draftPrompt";
 import { ClassificationResult, DraftResult } from "./mock";
 
-const DEFAULT_MODEL = process.env.AI_MODEL || "gemini-2.5-flash";
+const DEFAULT_MODEL = process.env.AI_MODEL || "gemini-3.5-flash";
 const TIMEOUT_MS = parseInt(process.env.AI_TIMEOUT_MS || "12000", 10);
 
 function getGeminiClient(): GoogleGenAI {
@@ -73,7 +73,7 @@ export async function geminiClassify(
     config: {
       systemInstruction: CLASSIFY_SYSTEM_PROMPT,
       temperature: 0,
-      maxOutputTokens: 150,
+      maxOutputTokens: 600,
       responseMimeType: "application/json",
       responseSchema: classifySchema,
     },
@@ -82,7 +82,17 @@ export async function geminiClassify(
   const response = await withTimeout(callPromise, TIMEOUT_MS, "Gemini classification timed out");
 
   const rawText = response.text || "{}";
-  const parsed = JSON.parse(rawText);
+  let parsed: any = {};
+  try {
+    parsed = JSON.parse(rawText.trim());
+  } catch {
+    const match = rawText.match(/\{[\s\S]*\}/);
+    if (match) {
+      parsed = JSON.parse(match[0]);
+    } else {
+      throw new Error("Invalid JSON from Gemini: " + rawText.slice(0, 100));
+    }
+  }
 
   const usage = response.usageMetadata;
   const promptTokens = usage?.promptTokenCount || 0;
@@ -121,7 +131,7 @@ export async function geminiDraft(
     config: {
       systemInstruction: DRAFT_SYSTEM_PROMPT,
       temperature: 0.4,
-      maxOutputTokens: 450,
+      maxOutputTokens: 2000,
     },
   });
 

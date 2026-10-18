@@ -7,7 +7,7 @@ import { mockClassify, mockDraft, ClassificationResult, DraftResult } from "./mo
 import { ClassifyInputSignals } from "./prompts/classifyPrompt";
 import { DraftPromptInput } from "./prompts/draftPrompt";
 
-const MODEL_NAME = process.env.AI_MODEL || "gemini-2.5-flash";
+const MODEL_NAME = process.env.AI_MODEL || "gemini-3.5-flash";
 
 async function logAiCall(params: {
   ticketId?: string;
