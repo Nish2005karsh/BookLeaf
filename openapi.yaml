@@ -1,0 +1,235 @@
+openapi: 3.1.0
+info:
+  title: BookLeaf Author Support & Communication Portal API
+  version: 1.0.0
+  description: >
+    Production-ready API for BookLeaf Publishing's Author Support & Communication Portal.
+    Includes role-based access control (Author vs Admin), book catalog access, ticket lifecycle
+    management, private internal notes, AI-assisted triage, and lazy email draft generation.
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+paths:
+  /auth/login:
+    post:
+      summary: User authentication
+      description: Authenticates an author or admin and issues an HTTP-only JWT session cookie (`bl_session`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: ananya.roy@example.com
+                password:
+                  type: string
+                  example: AuthorPass123!
+      responses:
+        '200':
+          description: Successfully authenticated. Cookie set in headers.
+        '401':
+          description: Invalid email or password.
+        '429':
+          description: Too many login attempts.
+
+  /auth/logout:
+    post:
+      summary: User logout
+      description: Clears the `bl_session` cookie.
+      responses:
+        '200':
+          description: Logged out successfully.
+
+  /auth/me:
+    get:
+      summary: Current session
+      description: Returns the authenticated user profile.
+      responses:
+        '200':
+          description: Authenticated user details.
+        '401':
+          description: Unauthenticated.
+
+  /books:
+    get:
+      summary: List books
+      description: Returns books. For authors, returns only their published and in-production titles.
+      responses:
+        '200':
+          description: List of books.
+        '401':
+          description: Unauthenticated.
+
+  /books/{id}:
+    get:
+      summary: Get book by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Book context details.
+        '404':
+          description: Book not found or access denied.
+
+  /tickets:
+    get:
+      summary: List tickets
+      description: Authors see only their own tickets. Admins see the full prioritized queue.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [OPEN, IN_PROGRESS, RESOLVED, CLOSED]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [CRITICAL, HIGH, MEDIUM, LOW]
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [urgency, newest, oldest]
+      responses:
+        '200':
+          description: Paginated ticket collection.
+    post:
+      summary: Create new ticket
+      description: Author raises a query. Asynchronously triggers AI classification without blocking response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, description]
+              properties:
+                subject:
+                  type: string
+                  maxLength: 150
+                description:
+                  type: string
+                  maxLength: 3000
+                bookId:
+                  type: string
+                attachmentNames:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Ticket created successfully.
+
+  /tickets/{id}:
+    get:
+      summary: Get ticket detail
+      description: Returns full ticket thread. Internal notes and AI triage fields are strictly filtered out for authors.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ticket thread and metadata.
+        '404':
+          description: Ticket not found or access denied.
+    patch:
+      summary: Update ticket triage or status
+      description: Admin-only. Can override status, category, and priority. Overrides are recorded with admin ID.
+      responses:
+        '200':
+          description: Ticket updated.
+        '403':
+          description: Forbidden for authors.
+
+  /tickets/{id}/messages:
+    post:
+      summary: Post a thread message
+      description: Adds a reply from Author or Admin. Author replies on RESOLVED tickets automatically reopen them. Rejects messages on CLOSED tickets.
+      responses:
+        '201':
+          description: Message posted.
+        '409':
+          description: Ticket is closed.
+
+  /tickets/{id}/notes:
+    post:
+      summary: Add internal note
+      description: Admin-only. Appends a private note invisible to the author.
+      responses:
+        '201':
+          description: Internal note saved.
+        '403':
+          description: Forbidden for authors.
+
+  /tickets/{id}/draft:
+    post:
+      summary: Get or regenerate AI draft reply
+      description: Admin-only. Lazily generates or returns cached draft. Falls back to deterministic template draft if AI is unavailable or AI_PROVIDER=mock.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                force:
+                  type: boolean
+                  description: Force regeneration ignoring cache.
+      responses:
+        '200':
+          description: Draft generated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      draft:
+                        type: string
+                      source:
+                        type: string
+                        enum: [ai, template]
+                      cached:
+                        type: boolean
+
+  /tickets/{id}/classify:
+    post:
+      summary: Trigger ticket classification
+      description: Admin-only. Re-runs triage classifier and updates ticket triage fields.
+      responses:
+        '200':
+          description: Ticket reclassified.
+
+  /tickets/{id}/assign-me:
+    post:
+      summary: Assign ticket to calling admin
+      description: Admin-only. Claims ticket.
+      responses:
+        '200':
+          description: Ticket assigned.
+
+  /admin/stats:
+    get:
+      summary: Admin dashboard metrics
+      description: Returns queue counts, open ticket count, critical/high count, and AI calls today.
+      responses:
+        '200':
+          description: Metrics object.
