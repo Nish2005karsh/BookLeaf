@@ -156,3 +156,40 @@ export function AiChip({ confidence, overriddenBy, ruleBased }: AiChipProps) {
     </span>
   );
 }
+
+export interface BadgeProps {
+  children: React.ReactNode;
+  variant?: "primary" | "coral" | "teal" | "amber" | "success" | "neutral";
+  size?: "sm" | "md";
+  className?: string;
+}
+
+export function Badge({
+  children,
+  variant = "neutral",
+  size = "md",
+  className = "",
+}: BadgeProps) {
+  const variantStyles = {
+    primary: "bg-[#FDE4E8] text-[#F2697A] border-[#F3C9D0]",
+    coral: "bg-[#FDE4E8] text-[#D9435A] border-[#F8B4BD]",
+    teal: "bg-[#EBF7F9] text-[#1E7485] border-[#C5EAF0]",
+    amber: "bg-amber-50 text-amber-700 border-amber-200",
+    success: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    neutral: "bg-[#F8F9FA] text-[#556070] border-[#E8ECF2]",
+  };
+
+  const sizeStyles = {
+    sm: "px-2 py-0.5 text-[10px]",
+    md: "px-2.5 py-1 text-xs",
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center font-bold rounded-full border ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
